@@ -106,22 +106,47 @@ const woordenLijst = [
     {t:7, nl:"de aankomst", fr:"l'arrivée"}, {t:7, nl:"antimuggenspray", fr:"le spray antimoustiques"}, {t:7, nl:"het baden", fr:"la baignade"}, {t:7, nl:"badlaken", fr:"la serviette de plage"}, {t:7, nl:"boarden", fr:"embarquer"}, {t:7, nl:"de boarding", fr:"l'embarquement"}, {t:7, nl:"bagage ophalen", fr:"récupérer les bagages"}, {t:7, nl:"dienst voor toerisme", fr:"le syndicat d'initiative"}, {t:7, nl:"Fijne vakantie!", fr:"Bonnes vacances!"}, {t:7, nl:"gelegen", fr:"situé"}, {t:7, nl:"de grens", fr:"la frontière"}, {t:7, nl:"handbagage", fr:"les bagages à main"}, {t:7, nl:"beter te reserveren", fr:"il vaut mieux"}, {t:7, nl:"de hoogte", fr:"l'altitude"}, {t:7, nl:"identiteitskaart", fr:"la carte d'identité"}, {t:7, nl:"goede reis!", fr:"bon voyage!"}, {t:7, nl:"inchecken", fr:"enregistrer"}, {t:7, nl:"in de buurt", fr:"à proximité"}, {t:7, nl:"in de tent slapen", fr:"dormir sous la tente"}, {t:7, nl:"de inlichting", fr:"le renseignement"}, {t:7, nl:"wildkamperen", fr:"le camping sauvage"}, {t:7, nl:"het kampvuur", fr:"le feu de camp"}, {t:7, nl:"het kasteel", fr:"le château"}, {t:7, nl:"de koffer", fr:"la valise"}, {t:7, nl:"komende uit", fr:"en provenance de"}, {t:7, nl:"het kompas", fr:"la boussole"}, {t:7, nl:"landen", fr:"atterrir"}, {t:7, nl:"logeren", fr:"loger"}, {t:7, nl:"luchtmatras", fr:"le matelas"}, {t:7, nl:"luchtvaartmij", fr:"la compagnie aérienne"}, {t:7, nl:"luidruchtig", fr:"bruyant"}, {t:7, nl:"bestemming", fr:"à destination de"}, {t:7, nl:"natuurpark", fr:"le parc naturel"}, {t:7, nl:"onthalen", fr:"accueillir"}, {t:7, nl:"openingsuren", fr:"les heures d'ouverture"}, {t:7, nl:"opstijgen", fr:"décoller"}, {t:7, nl:"overstappen", fr:"changer de train"}, {t:7, nl:"paspoortcontrole", fr:"le contrôle passeport"}, {t:7, nl:"reisdocumenten", fr:"les documents de voyage"}, {t:7, nl:"reistas", fr:"le sac de voyage"}, {t:7, nl:"reiziger", fr:"le voyageur"}, {t:7, nl:"vooraf reserveren", fr:"réserver à l'avance"}, {t:7, nl:"de rugzak", fr:"le sac à dos"}, {t:7, nl:"de slaapzak", fr:"le sac de couchage"}, {t:7, nl:"de stage, kamp", fr:"le stage"}, {t:7, nl:"standplaats", fr:"l'emplacement"}, {t:7, nl:"ticketautomaat", fr:"la borne"}, {t:7, nl:"duurzaam toerisme", fr:"le tourisme"}, {t:7, nl:"toestemming", fr:"l'autorisation"}, {t:7, nl:"toilettas", fr:"la trousse"}, {t:7, nl:"veiligheidscontrole", fr:"le contrôle de sûreté"}, {t:7, nl:"het verblijf", fr:"le séjour"}, {t:7, nl:"het vertrek", fr:"le départ"}, {t:7, nl:"vliegen", fr:"voler"}, {t:7, nl:"de vlucht", fr:"le vol"}, {t:7, nl:"wereldreis", fr:"le tour du monde"}, {t:7, nl:"het zicht", fr:"la vue"}, {t:7, nl:"koffer maken", fr:"faire sa valise"}, {t:7, nl:"tent opvouwen", fr:"replier sa tente"}, {t:7, nl:"tent opzetten", fr:"monter sa tente"}, {t:7, nl:"zonnecrème", fr:"la crème solaire"}, {t:7, nl:"het zonnen", fr:"le bain de soleil"}
 ];
 
+// Base de données blijft hetzelfde (woordenLijst...)
 let allSets = [];
 let currentSetIdx = 0, wordIdx = 0, timeLeft = 8, isPaused = false, interval;
+
+// --- VASTE SHUFFLE FUNCTIE ---
+function seededShuffle(array, seed) {
+    let m = array.length, t, i;
+    const random = () => {
+        var x = Math.sin(seed++) * 10000;
+        return x - Math.floor(x);
+    };
+    while (m) {
+        i = Math.floor(random() * m--);
+        t = array[m];
+        array[m] = array[i];
+        array[i] = t;
+    }
+    return array;
+}
 
 function generateSets(trajetNum) {
     const grid = document.getElementById('set-grid');
     grid.innerHTML = '';
     if (!trajetNum) return;
 
-    const gefilterd = woordenLijst.filter(w => w.t == trajetNum);
+    // 1. Filteren
+    let gefilterd = woordenLijst.filter(w => w.t == trajetNum);
+    
+    // 2. Eénmaal Shuffelen (zoals in de eerste code)
+    let gemixt = seededShuffle([...gefilterd], 12345);
+    
     allSets = [];
 
+    // 3. Verdelen over 10 reeksen (zonder overlap)
     for (let i = 0; i < 10; i++) {
-        let start = i * 9;
-        let set = gefilterd.slice(start, start + 14);
-        if (set.length < 14 && gefilterd.length > 0) {
-             set = [...set, ...gefilterd.slice(0, 14 - set.length)];
+        let start = i * 14; 
+        let set = gemixt.slice(start, start + 14);
+        
+        // Als de lijst op is, vul aan vanaf het begin van de gemixte lijst
+        if (set.length < 14 && gemixt.length > 0) {
+             set = [...set, ...gemixt.slice(0, 14 - set.length)];
         }
         if (set.length > 0) allSets.push(set);
     }
@@ -131,7 +156,7 @@ function generateSets(trajetNum) {
         card.className = 'set-card';
         card.innerHTML = `
             <h3>Série ${i+1}</h3>
-            <p style="color:#888; font-size:14px;">Trajet ${trajetNum} - ${set.length} mots</p>
+            <p style="color:#888; font-size:14px;">Trajet ${trajetNum} - ${set.length} mots (Mixé)</p>
             <button class="btn" onclick="startSet(${i})">🚀 Commencer</button>
             <button class="btn btn-secondary" onclick="openEdit(${i})">📝 Voir la liste</button>
         `;
@@ -139,65 +164,27 @@ function generateSets(trajetNum) {
     });
 }
 
-// --- Functies voor Bewerken ---
-function openEdit(idx) {
-    currentSetIdx = idx;
-    document.getElementById('edit-title').innerText = `Modifier la Série ${idx + 1}`;
-    const tbody = document.getElementById('edit-body');
-    tbody.innerHTML = '';
-    
-    allSets[idx].forEach((word, wIdx) => {
-        addTableRow(word.nl, word.fr);
-    });
-    
-    document.getElementById('edit-screen').style.display = 'flex';
-}
-
-function addTableRow(nl = "", fr = "") {
-    const tbody = document.getElementById('edit-body');
-    const row = document.createElement('tr');
-    row.innerHTML = `
-        <td><input type="text" class="edit-nl" value="${nl}"></td>
-        <td><input type="text" class="edit-fr" value="${fr}"></td>
-        <td><button onclick="this.parentElement.parentElement.remove()" style="color:red; background:none; border:none; cursor:pointer;">✖</button></td>
-    `;
-    tbody.appendChild(row);
-}
-
-function addRow() { addTableRow(); }
-
-function saveAndStart() {
-    const newWords = [];
-    const nlInputs = document.querySelectorAll('.edit-nl');
-    const frInputs = document.querySelectorAll('.edit-fr');
-    
-    nlInputs.forEach((input, i) => {
-        if(input.value.trim() !== "") {
-            newWords.push({ nl: input.value, fr: frInputs[i].value });
-        }
-    });
-    
-    allSets[currentSetIdx] = newWords;
-    closeEdit();
-    startSet(currentSetIdx);
-}
-
-function closeEdit() { document.getElementById('edit-screen').style.display = 'none'; }
-
 // --- Functies voor Oefening ---
 function startSet(idx) {
     currentSetIdx = idx; wordIdx = 0;
     document.getElementById('container').style.display = 'none';
     document.getElementById('exercise').style.display = 'flex';
+    document.getElementById('timer-container').style.display = 'block'; // Zorg dat timer zichtbaar is
     nextWord();
 }
 
 function nextWord() {
     const set = allSets[currentSetIdx];
-    if (wordIdx >= set.length) { showResults(); return; }
+    
+    // STOP CONDITIE: Als de woorden op zijn, toon de pauze-knop voor de docent
+    if (wordIdx >= set.length) { 
+        wachtenOpDocent(); 
+        return; 
+    }
     
     timeLeft = 8; 
     document.getElementById('word-display').innerText = set[wordIdx].nl;
+    document.getElementById('word-display').style.fontSize = "60px"; // Reset font size
     document.getElementById('info-header').innerText = `Série ${currentSetIdx+1} — Mot ${wordIdx+1}/${set.length}`;
     updateTimerBar();
 
@@ -214,26 +201,42 @@ function nextWord() {
     }, 1000);
 }
 
-function updateTimerBar() {
-    const bar = document.getElementById('timer-bar');
-    bar.style.width = (timeLeft / 8 * 100) + '%';
-    bar.style.backgroundColor = timeLeft < 3 ? 'var(--danger)' : 'var(--success)';
-}
-
-function togglePause() {
-    isPaused = !isPaused;
-    document.getElementById('pause-btn').innerText = isPaused ? "Reprendre" : "Pause";
+function wachtenOpDocent() {
+    clearInterval(interval);
+    document.getElementById('timer-container').style.display = 'none'; 
+    document.getElementById('word-display').innerText = "Série terminée !";
+    document.getElementById('word-display').style.fontSize = "40px";
+    
+    // Voeg de grote knop toe om de oplossingen te tonen
+    const exerciseDiv = document.getElementById('exercise');
+    // Verwijder oude knoppen even om plaats te maken voor de grote knop
+    const buttonContainer = document.querySelector('#exercise div[style*="display:flex"]');
+    buttonContainer.innerHTML = `
+        <button class="btn" style="width: auto; padding: 20px 50px; font-size: 24px; background: var(--success);" onclick="showResults()">
+            👀 Afficher de Oplossingen
+        </button>
+        <button class="btn" style="width:auto; padding: 20px 30px; background:var(--danger);" onclick="location.reload()">Arrêter</button>
+    `;
 }
 
 function showResults() {
     clearInterval(interval);
     document.getElementById('exercise').style.display = 'none';
     document.getElementById('result').style.display = 'flex';
-    document.getElementById('res-body').innerHTML = allSets[currentSetIdx].map(w => `
-        <tr><td>${w.nl}</td><td style="color:var(--primary); font-weight:bold;">${w.fr}</td></tr>
+    
+    const resBody = document.getElementById('res-body');
+    resBody.style.fontSize = "30px"; // Grote letters voor de klas
+    resBody.innerHTML = allSets[currentSetIdx].map(w => `
+        <tr style="border-bottom: 1px solid #444;">
+            <td style="padding: 15px;">${w.nl}</td>
+            <td style="color:var(--primary); font-weight:bold; padding: 15px;">${w.fr}</td>
+        </tr>
     `).join('');
 }
+
+// Behoud de andere hulpfuncties (updateTimerBar, togglePause, openEdit, etc.)
 </script>
 
 </body>
 </html>
+
