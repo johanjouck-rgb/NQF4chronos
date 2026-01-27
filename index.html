@@ -228,10 +228,11 @@ function showResults() {
     document.getElementById('result').style.display = 'flex';
     
     const resBody = document.getElementById('res-body');
+    // We voegen hier extra inline styling toe voor maximale grootte
     resBody.innerHTML = allSets[currentSetIdx].map(w => `
-        <tr>
-            <td style="padding: 12px;">${w.nl}</td>
-            <td style="color:var(--primary); font-weight:bold; padding: 12px;">${w.fr}</td>
+        <tr style="border-bottom: 2px solid #333;">
+            <td style="padding: 20px; font-size: 40px; width: 50%;">${w.nl}</td>
+            <td style="padding: 20px; font-size: 45px; color: var(--primary); font-weight: bold; width: 50%;">${w.fr}</td>
         </tr>
     `).join('');
 }
@@ -281,3 +282,4 @@ function closeEdit() {
 
 </body>
 </html>
+
