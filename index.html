@@ -2,13 +2,13 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Entraînement Vocabulaire Pelckmans</title>
+    <title>Entraînement Vocabulaire Pelckmans (+Save)</title>
     <style>
         :root { --primary: #3498db; --success: #2ecc71; --danger: #e74c3c; --bg: #121212; --card: #1e1e1e; --accent: #f1c40f; }
         body { background-color: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; }
         #container { width: 95%; max-width: 1100px; margin: 40px auto; text-align: center; }
         
-        .selector-container { background: var(--card); padding: 25px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #333; }
+        .selector-container { background: var(--card); padding: 25px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #333; display: flex; align-items: center; justify-content: center; gap: 15px; flex-wrap: wrap; }
         select { padding: 12px; background: #333; color: white; border-radius: 6px; border: 1px solid var(--primary); font-size: 16px; width: 250px; cursor: pointer; }
 
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
@@ -17,6 +17,8 @@
         
         .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 15px; width: 100%; margin-top: 10px; transition: 0.3s; font-weight: bold; }
         .btn-secondary { background: #555; }
+        .btn-danger { background: var(--danger); }
+        .btn-warning { background: var(--accent); color: #000; width: auto; }
         .btn:hover { filter: brightness(1.2); }
 
         .screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 100; justify-content: center; align-items: center; flex-direction: column; }
@@ -37,20 +39,23 @@
 
 <div id="container">
     <h1>Entraînement Vocabulaire Pelckmans</h1>
-    <p style="color: #888;">Sélectionnez un Trajet pour générer les 10 séries d'exercices.</p>
+    <p style="color: #888;">Sélectionnez un Trajet. Vos modifications sont automatiquement sauvegardées.</p>
     
     <div class="selector-container">
-        <label style="margin-right: 15px;">Choisir le Trajet :</label>
-        <select id="trajet-select" onchange="generateSets(this.value)">
-            <option value="">-- Faites un choix --</option>
-            <option value="1">Trajet 1</option>
-            <option value="2">Trajet 2</option>
-            <option value="3">Trajet 3</option>
-            <option value="4">Trajet 4</option>
-            <option value="5">Trajet 5</option>
-            <option value="6">Trajet 6</option>
-            <option value="7">Trajet 7</option>
-        </select>
+        <div>
+            <label style="margin-right: 15px;">Choisir le Trajet :</label>
+            <select id="trajet-select" onchange="generateSets(this.value)">
+                <option value="">-- Faites un choix --</option>
+                <option value="1">Trajet 1</option>
+                <option value="2">Trajet 2</option>
+                <option value="3">Trajet 3</option>
+                <option value="4">Trajet 4</option>
+                <option value="5">Trajet 5</option>
+                <option value="6">Trajet 6</option>
+                <option value="7">Trajet 7</option>
+            </select>
+        </div>
+        <button class="btn btn-warning" onclick="resetCurrentTrajet()" id="reset-btn" style="display:none;">🔄 Réinitialiser ce trajet</button>
     </div>
 
     <div class="grid" id="set-grid"></div>
@@ -69,7 +74,7 @@
     </div>
     <div style="display:flex; gap:15px; width: 90%; max-width: 500px;">
         <button class="btn" onclick="saveAndStart()">🚀 Enregistrer et Commencer</button>
-        <button class="btn btn-secondary" onclick="closeEdit()">Annuler</button>
+        <button class="btn btn-secondary" onclick="closeEdit()">Fermer</button>
     </div>
 </div>
 
@@ -107,6 +112,7 @@ const woordenLijst = [
 
 let allSets = [];
 let currentSetIdx = 0, wordIdx = 0, timeLeft = 8, isPaused = false, interval;
+let currentTrajet = null;
 
 // --- VASTE SHUFFLE FUNCTIE ---
 function seededShuffle(array, seed) {
@@ -124,24 +130,64 @@ function seededShuffle(array, seed) {
     return array;
 }
 
+// --- LOCAL STORAGE HELPERS ---
+function getStorageKey(trajet) {
+    return 'pelckmans_sets_t' + trajet;
+}
+
+function saveToLocalStorage() {
+    if (currentTrajet) {
+        localStorage.setItem(getStorageKey(currentTrajet), JSON.stringify(allSets));
+    }
+}
+
+function resetCurrentTrajet() {
+    if(!currentTrajet) return;
+    if(confirm("Voulez-vous vraiment réinitialiser ce trajet ? Toutes vos modifications seront perdues.")) {
+        localStorage.removeItem(getStorageKey(currentTrajet));
+        generateSets(currentTrajet); // Regenerate from source
+    }
+}
+
 function generateSets(trajetNum) {
     const grid = document.getElementById('set-grid');
     grid.innerHTML = '';
-    if (!trajetNum) return;
-
-    let gefilterd = woordenLijst.filter(w => w.t == trajetNum);
-    let gemixt = seededShuffle([...gefilterd], 12345);
-    allSets = [];
-
-    for (let i = 0; i < 10; i++) {
-        let start = i * 14; 
-        let set = gemixt.slice(start, start + 14);
-        if (set.length < 14 && gemixt.length > 0) {
-             set = [...set, ...gemixt.slice(0, 14 - set.length)];
-        }
-        if (set.length > 0) allSets.push(set);
+    const resetBtn = document.getElementById('reset-btn');
+    
+    if (!trajetNum) {
+        resetBtn.style.display = 'none';
+        currentTrajet = null;
+        return;
     }
 
+    currentTrajet = trajetNum;
+    resetBtn.style.display = 'inline-block';
+    
+    // 1. Check LocalStorage
+    const savedData = localStorage.getItem(getStorageKey(trajetNum));
+    
+    if (savedData) {
+        // Load saved data
+        allSets = JSON.parse(savedData);
+    } else {
+        // Generate fresh data
+        let gefilterd = woordenLijst.filter(w => w.t == trajetNum);
+        let gemixt = seededShuffle([...gefilterd], 12345);
+        allSets = [];
+
+        for (let i = 0; i < 10; i++) {
+            let start = i * 14; 
+            let set = gemixt.slice(start, start + 14);
+            if (set.length < 14 && gemixt.length > 0) {
+                 set = [...set, ...gemixt.slice(0, 14 - set.length)];
+            }
+            if (set.length > 0) allSets.push(set);
+        }
+        // Save initial state so future edits are tracked against this structure
+        saveToLocalStorage();
+    }
+
+    // Render Grid
     allSets.forEach((set, i) => {
         const card = document.createElement('div');
         card.className = 'set-card';
@@ -149,7 +195,7 @@ function generateSets(trajetNum) {
             <h3>Série ${i+1}</h3>
             <p style="color:#888; font-size:14px;">Trajet ${trajetNum} - ${set.length} mots</p>
             <button class="btn" onclick="startSet(${i})">🚀 Commencer</button>
-            <button class="btn btn-secondary" onclick="openEdit(${i})">👀 Voir la liste</button>
+            <button class="btn btn-secondary" onclick="openEdit(${i})">✏️ Modifier / Voir</button>
         `;
         grid.appendChild(card);
     });
@@ -161,7 +207,6 @@ function updateTimerBar() {
     const percentage = (timeLeft / 8) * 100;
     bar.style.width = percentage + "%";
     
-    // Kleur veranderen als tijd bijna op is
     if (timeLeft <= 2) bar.style.background = "var(--danger)";
     else bar.style.background = "var(--success)";
 }
@@ -228,7 +273,6 @@ function showResults() {
     document.getElementById('result').style.display = 'flex';
     
     const resBody = document.getElementById('res-body');
-    // We voegen hier extra inline styling toe voor maximale grootte
     resBody.innerHTML = allSets[currentSetIdx].map(w => `
         <tr style="border-bottom: 2px solid #333;">
             <td style="padding: 20px; font-size: 40px; width: 50%;">${w.nl}</td>
@@ -240,7 +284,7 @@ function showResults() {
 // --- EDIT / LIST LOGIC ---
 function openEdit(idx) {
     currentSetIdx = idx;
-    document.getElementById('edit-title').innerText = `Liste Série ${idx+1}`;
+    document.getElementById('edit-title').innerText = `Modifier Série ${idx+1}`;
     const body = document.getElementById('edit-body');
     body.innerHTML = '';
     
@@ -258,28 +302,34 @@ function openEdit(idx) {
 
 function updateWord(i, lang, val) {
     allSets[currentSetIdx][i][lang] = val;
+    saveToLocalStorage(); // Auto-save on edit
 }
 
 function addRow() {
     allSets[currentSetIdx].push({nl: "", fr: ""});
+    saveToLocalStorage(); // Auto-save on add
     openEdit(currentSetIdx);
 }
 
 function deleteRow(i) {
     allSets[currentSetIdx].splice(i, 1);
+    saveToLocalStorage(); // Auto-save on delete
     openEdit(currentSetIdx);
 }
 
 function saveAndStart() {
+    saveToLocalStorage();
     document.getElementById('edit-screen').style.display = 'none';
     startSet(currentSetIdx);
 }
 
 function closeEdit() {
+    saveToLocalStorage();
     document.getElementById('edit-screen').style.display = 'none';
+    // Refresh the grid just in case word counts changed
+    generateSets(currentTrajet);
 }
 </script>
 
 </body>
 </html>
-
